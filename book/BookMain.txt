@@ -1,0 +1,220 @@
+package book;
+
+import java.awt.*;
+import java.awt.event.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
+import javax.swing.*;
+import javax.swing.border.BevelBorder;
+import javax.swing.table.*;
+import book.DetailFrame;
+
+import com.mysql.cj.xdevapi.Statement;
+
+class Book_GUI extends JFrame implements ActionListener, MouseListener {
+
+	BookDAO bookDAO;
+    BookDTO bookDTO;
+
+    JLabel jlBook_Name, jlAuthor_Name;
+    JTextField jtBook_Name, jtAuthor_Name;
+    JButton jbSearch;
+    JTable table;
+    Vector data, col;
+
+    public Book_GUI() {
+        setLayout(null);
+        getContentPane().setBackground(Color.white);
+        bookDAO = new BookDAO();
+
+        // 도서명
+        add(jlBook_Name = new JLabel("도서명", JLabel.CENTER));
+        jlBook_Name.setFont(new Font("맑은 고딕", Font.BOLD, 20));
+        jlBook_Name.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED, Color.black, Color.black));
+        jlBook_Name.setBounds(10, 10, 120, 50);
+
+        add(jtBook_Name = new JTextField());
+        jtBook_Name.setFont(new Font("맑은 고딕", Font.BOLD, 15));
+        jtBook_Name.setHorizontalAlignment(JTextField.CENTER);
+        jtBook_Name.setBounds(140, 10, 250, 50);
+
+        // 저자
+        add(jlAuthor_Name = new JLabel("저자", JLabel.CENTER));
+        jlAuthor_Name.setFont(new Font("맑은 고딕", Font.BOLD, 20));
+        jlAuthor_Name.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED, Color.black, Color.black));
+        jlAuthor_Name.setBounds(10, 70, 120, 50);
+
+        add(jtAuthor_Name = new JTextField());
+        jtAuthor_Name.setFont(new Font("맑은 고딕", Font.BOLD, 15));
+        jtAuthor_Name.setHorizontalAlignment(JTextField.CENTER);
+        jtAuthor_Name.setBounds(140, 70, 250, 50);
+
+        // 버튼
+        add(jbSearch = new JButton("검색"));
+        jbSearch.setFont(new Font("맑은 고딕", Font.BOLD, 20));
+        jbSearch.setBounds(270, 190, 120, 50);
+        jbSearch.addActionListener(this);
+        jbSearch.setBackground(new Color(0, 0, 128));
+        jbSearch.setForeground(Color.white);
+
+        // 컬럼 벡터
+        col = new Vector();
+        col.add("도서코드");
+        col.add("도서명");
+        col.add("저자");
+        col.add("출판년도");
+        col.add("상태");
+
+        // 테이블 수정 못하게 DefaultTableModel 사용
+        MyTableModel model = new MyTableModel(bookDAO.getBooks(), col);
+
+        // 디폴트 테이블을 테이블에 합쳐서 스크롤패널 더함
+        table = new JTable(model);
+        table.addMouseListener(this);
+
+        JScrollPane scroll = new JScrollPane(table);
+        add(scroll);
+        scroll.setBounds(415, 10, 770, 250);
+
+        setTitle("도서검색프로그램");
+        setSize(1200, 300);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // 창 닫기 동작 설정
+        setVisible(true);
+    }
+
+    @Override
+    public void mouseClicked(MouseEvent e) {
+        int rowIndex = table.getSelectedRow();
+        jtBook_Name.setText(table.getValueAt(rowIndex, 1) + "");
+        jtAuthor_Name.setText(table.getValueAt(rowIndex, 2) + "");
+
+        if (e.getClickCount() == 2) {
+            int rowIndex1 = table.getSelectedRow();
+            if (rowIndex1 != -1) {
+                showDetailFrame(rowIndex1);
+            }
+        }
+    }
+
+    private void showDetailFrame(int rowIndex) {
+        // 선택된 행의 데이터를 가져옴
+        int code = (int) table.getValueAt(rowIndex, col.indexOf("도서코드"));
+        String bookName = (String) table.getValueAt(rowIndex, col.indexOf("도서명"));
+        String authorName = (String) table.getValueAt(rowIndex, col.indexOf("저자"));
+        int year = (int) table.getValueAt(rowIndex, col.indexOf("출판년도"));
+
+        // DetailFrame 생성 및 데이터 전달
+        new DetailFrame(code, bookName, authorName, year);
+    }
+
+	@Override
+    public void mousePressed(MouseEvent e) {
+        // TODO Auto-generated method stub
+    }
+
+    @Override
+    public void mouseReleased(MouseEvent e) {
+        // TODO Auto-generated method stub
+    }
+
+    @Override
+    public void mouseEntered(MouseEvent e) {
+        // TODO Auto-generated method stub
+    }
+
+    @Override
+    public void mouseExited(MouseEvent e) {
+        // TODO Auto-generated method stub
+    }
+
+    public void contentSet() {
+        bookDTO = new BookDTO();
+
+        String book_name = jtBook_Name.getText();
+        String author_name = jtAuthor_Name.getText();
+
+        bookDTO.setBook_name(book_name);
+        bookDTO.setAuthor_name(author_name);
+    }
+
+    public void contentClear() {
+        jtBook_Name.setText("");
+        jtAuthor_Name.setText("");
+    }
+
+    public void jTableRefresh() {
+        // 테이블 수정 못하게 DefaultTableModel 사용
+        MyTableModel model = new MyTableModel(bookDAO.getBooks(), col);
+
+        table.setModel(model);
+        table = new JTable(model);
+    }
+
+    public void searchBook() {
+        // 검색을 위해 BookDTO 객체를 생성하고 사용자가 입력한 도서명과 저자명을 설정합니다.
+        bookDTO = new BookDTO();
+        String book_name = jtBook_Name.getText();
+        String author_name = jtAuthor_Name.getText();
+        bookDTO.setBook_name(book_name);
+        bookDTO.setAuthor_name(author_name);
+
+        // BookDAO의 searchBook 메소드를 호출하여 검색을 수행합니다.
+        Vector result = bookDAO.searchBook(bookDTO);
+
+        // 결과를 MyTableModel에 설정하고 테이블을 갱신합니다.
+        MyTableModel model = new MyTableModel(result, col);
+
+        // 테이블 모델 갱신
+        table.setModel(model);
+
+        // 상태 컬럼 업데이트
+        updateStatusColumn();
+    }
+
+    private void updateStatusColumn() {
+        DefaultTableModel model = (DefaultTableModel) table.getModel();
+
+        for (int row = 0; row < model.getRowCount(); row++) {
+            // "상태" 컬럼 업데이트 (실제로는 데이터베이스의 값을 참조하여 업데이트)
+            int statusValue = (int) model.getValueAt(row, col.indexOf("상태"));
+            String statusText = (statusValue == 1) ? "대여중" : "대여가능";
+            model.setValueAt(statusText, row, col.indexOf("상태"));
+        }
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        String ButtonFlag = e.getActionCommand();
+
+        if (ButtonFlag.equals("검색")) {
+            try {
+                searchBook();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+
+    // 테이블 모델을 확장한 클래스
+    class MyTableModel extends DefaultTableModel {
+        public MyTableModel(Vector data, Vector col) {
+            super(data, col);
+        }
+
+        @Override
+        public boolean isCellEditable(int row, int column) {
+            return false;
+        }
+    }
+}
+
+// 이하 main 메소드를 가진 BookMain 클래스는 동일하게 유지됩니다.
+public class BookMain {
+    public BookMain() {
+        new Book_GUI();
+    }
+}

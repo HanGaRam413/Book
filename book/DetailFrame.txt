@@ -1,0 +1,144 @@
+package book;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.sql.*;
+
+public class DetailFrame extends JFrame {
+
+    private static final String JDBC_URL = "jdbc:mysql://localhost:3306/mydb";
+    private static final String USER = "root";
+    private static final String PASSWORD = "1234";
+
+    private JLabel titleLabel; // titleLabel을 필드로 변경
+
+    public DetailFrame(int code, String bookName, String authorName, int year) {
+        setTitle("검색칸 상세정보");
+        setSize(700, 450);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        setLayout(new BorderLayout());
+        getContentPane().setBackground(Color.WHITE);
+
+        int frameWidth = getWidth();
+
+        JSeparator separator = new JSeparator();
+        separator.setBounds(0, 70, frameWidth - 20, 5);
+        add(separator, BorderLayout.NORTH);
+
+        JPanel infoPanel = new JPanel();
+        infoPanel.setLayout(new GridLayout(3, 1));
+
+        titleLabel = new JLabel("제목:"); // titleLabel로 변경
+        JLabel authorLabel = new JLabel("저자:");
+        JLabel publisherLabel = new JLabel("발행사항:");
+
+        Font labelFont = new Font("맑은 고딕", Font.BOLD, 20);
+        titleLabel.setFont(labelFont);
+        authorLabel.setFont(labelFont);
+        publisherLabel.setFont(labelFont);
+
+        infoPanel.add(titleLabel);
+        infoPanel.add(authorLabel);
+        infoPanel.add(publisherLabel);
+
+        add(infoPanel, BorderLayout.CENTER);
+
+        JButton rentButton = new JButton("대여");
+        rentButton.setForeground(Color.WHITE);
+        rentButton.setFont(new Font("맑은 고딕", Font.BOLD, 20));
+        rentButton.setBackground(new Color(0, 0, 128));
+        rentButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Rent_Popup rp = new Rent_Popup(DetailFrame.this);
+            }
+        });
+
+        add(rentButton, BorderLayout.SOUTH);
+
+        JLabel detailLabel = new JLabel("상세 정보");
+        detailLabel.setFont(new Font("맑은 고딕", Font.BOLD, 30));
+        detailLabel.setHorizontalAlignment(JLabel.CENTER);
+        add(detailLabel, BorderLayout.NORTH);
+
+        try (Connection connection = DriverManager.getConnection(JDBC_URL, USER, PASSWORD)) {
+            String query = "SELECT * FROM books WHERE code = ?";
+            try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+                preparedStatement.setInt(1, code);
+                try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                    while (resultSet.next()) {
+                        String book_name = resultSet.getString("book_name");
+                        String author_name = resultSet.getString("author_name");
+                        String publicationYear = resultSet.getString("year");
+
+                        titleLabel.setText("제목: " + book_name);
+                        authorLabel.setText("저자: " + author_name);
+                        publisherLabel.setText("발행사항: " + publicationYear);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        setVisible(true);
+    }
+
+    // getTitleLabel 메소드 추가
+    public JLabel getTitleLabel() {
+        return titleLabel;
+    }
+
+    public static void main(String[] args) {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        SwingUtilities.invokeLater(() -> new DetailFrame(0, "BookName", "AuthorName", 2022));
+    }
+
+    public void updateStatus() {
+        try (Connection connection = DriverManager.getConnection(JDBC_URL, USER, PASSWORD)) {
+            String query = "SELECT status FROM books WHERE code = ?";
+            try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+                // 책 코드를 가져오는 메소드나 변수가 있다고 가정합니다.
+                int bookCode = getBookCode();
+                preparedStatement.setInt(1, bookCode);
+                try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                    if (resultSet.next()) {
+                        String status = resultSet.getString("status");
+                        titleLabel.setText("대여 상태: " + status);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private int getBookCode() {
+        try (Connection connection = DriverManager.getConnection(JDBC_URL, USER, PASSWORD)) {
+            String query = "SELECT code FROM books WHERE book_name = ? AND author_name = ? AND year = ?";
+            try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+                preparedStatement.setString(1, titleLabel.getText().replace("제목: ", ""));
+                // 여러분의 데이터베이스에 따라 author_name과 year를 적절히 맞추어 주세요.
+                preparedStatement.setString(2, "AuthorName");
+                preparedStatement.setInt(3, 2022);
+
+                try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                    if (resultSet.next()) {
+                        return resultSet.getInt("code");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return -1; // 실패한 경우 -1을 반환하거나 적절한 오류 처리를 추가하세요.
+    }
+}

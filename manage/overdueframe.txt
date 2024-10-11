@@ -1,0 +1,68 @@
+package manage;
+
+import manage.BookDTO;
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.List;
+
+public class overdueFrame extends JFrame {
+
+    public overdueFrame() {
+        setTitle("연체 도서 목록");
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // 창 닫기 동작 설정
+        setSize(1300, 600);
+        super.setResizable(true);
+        setLocationRelativeTo(null);
+
+        // Getting overdue books
+        BookDAO bookDAO = new BookDAO();
+        List<BookDTO> overdueBooks = bookDAO.getOverdueBooks();
+
+        // Updating returnState in the database
+        bookDAO.updateReturnState();
+
+        // Creating table model
+        DefaultTableModel model = new DefaultTableModel();
+        model.addColumn("도서코드");
+        model.addColumn("도서명");
+        model.addColumn("저자명");
+        model.addColumn("출판년도");
+        model.addColumn("대여일");
+        model.addColumn("반납일");
+        model.addColumn("오늘");
+        model.addColumn("상태");
+
+        // Adding overdue books to the model
+        for (BookDTO book : overdueBooks) {
+            model.addRow(new Object[]{
+                    book.getCode(),
+                    book.getBookName(),
+                    book.getAuthorName(),
+                    book.getYear(),
+                    book.getCheckoutDate(), // Display checkoutDate
+                    book.getReturnDate(),   // Display returnDate
+                    book.getToDay(),
+                    book.getReturnState()
+            });
+        }
+
+        // Creating table
+        JTable table = new JTable(model);
+
+        // Adding table to scroll pane
+        JScrollPane scrollPane = new JScrollPane(table);
+        add(scrollPane, BorderLayout.CENTER);
+
+        setVisible(true);
+    }
+
+    public static void main(String[] args) {
+        new overdueFrame();
+    }
+}

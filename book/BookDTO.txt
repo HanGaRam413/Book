@@ -1,0 +1,60 @@
+package book;
+
+public class BookDTO {
+    private int code;
+    private String book_name;
+    private String author_name;
+    private int year;
+    private int status;
+
+    public int getCode() {
+        return code;
+    }
+
+    public void setCode(int code) {
+        this.code = code;
+    }
+
+    public String getBook_name() {
+        return book_name;
+    }
+
+    public void setBook_name(String book_name) {
+        this.book_name = book_name;
+    }
+
+    public String getAuthor_name() {
+        return author_name;
+    }
+
+    public void setAuthor_name(String author_name) {
+        this.author_name = author_name;
+    }
+
+    public int getYear() {
+        return year;
+    }
+
+    public void setYear(int year) {
+        this.year = year;
+    }
+
+    public int getStatus() {
+        return status;
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
+    }
+
+    public String getType() {
+        // 간단히 "책"으로 고정
+        return "책";
+    }
+
+	@Override
+	public String toString() {
+		return "book_name = " + book_name + ", " + "author_name = " + author_name + ", " + "code = " + code + ", " + "year = " + year + "status = " + status;
+	}
+	
+}

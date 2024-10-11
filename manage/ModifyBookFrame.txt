@@ -1,0 +1,169 @@
+package manage;
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+public class ModifyBookFrame extends JFrame {
+    private JTable table;
+    private DefaultTableModel model;
+    private JButton btnModify;
+
+    public ModifyBookFrame() {
+        setTitle("도서 정보 수정");
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setSize(600, 500);
+        setLocationRelativeTo(null);
+
+        JPanel panel = new JPanel(new BorderLayout());
+        add(panel);
+
+        // 테이블 모델 생성
+        model = new DefaultTableModel();
+        model.addColumn("도서명");
+        model.addColumn("저자명");
+        model.addColumn("출판년도");
+
+        // 테이블 생성
+        table = new JTable(model);
+        JScrollPane scrollPane = new JScrollPane(table);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        // "수정하기" 버튼 생성
+        btnModify = new JButton("수정하기");
+        btnModify.setFont(new Font("맑은 고딕", Font.BOLD, 20));
+        btnModify.setHorizontalTextPosition(SwingConstants.CENTER);
+        btnModify.setVerticalTextPosition(SwingConstants.CENTER);
+        panel.add(btnModify, BorderLayout.SOUTH);
+
+        // 테이블 데이터 로드
+        loadBooks();
+
+        // "수정하기" 버튼에 대한 액션 리스너 등록
+        btnModify.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int selectedRow = table.getSelectedRow();
+                if (selectedRow != -1) { // 선택된 항목이 있을 경우
+                    String bookName = (String) model.getValueAt(selectedRow, 0);
+                    openModifyBookDialog(bookName);
+                } else {
+                    JOptionPane.showMessageDialog(ModifyBookFrame.this, "도서를 선택하세요.");
+                }
+            }
+        });
+
+        setVisible(true);
+    }
+
+    private void loadBooks() {
+        // 데이터베이스에서 도서 정보를 로드하여 테이블에 추가하는 메서드
+        BookDAO bookDAO = new BookDAO(); // BookDAO 클래스의 인스턴스 생성
+        try {
+            Connection conn = bookDAO.getConn(); // 해당 인스턴스에서 getConn() 메서드 호출
+            String query = "SELECT book_name, author_name, year FROM managebooks";
+            PreparedStatement stmt = conn.prepareStatement(query);
+            ResultSet rs = stmt.executeQuery();
+
+            // 테이블에 결과 추가
+            while (rs.next()) {
+                String bookName = rs.getString("book_name");
+                String authorName = rs.getString("author_name");
+                int year = rs.getInt("year");
+                model.addRow(new Object[]{bookName, authorName, year});
+            }
+
+            rs.close();
+            stmt.close();
+            conn.close();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "도서 정보를 불러오는 중 오류가 발생했습니다.");
+        }
+    }
+
+    private void openModifyBookDialog(String bookName) {
+        // 선택된 도서명을 기반으로 도서 정보 수정 창을 열어주는 메서드
+        ModifyBookDialog modifyDialog = new ModifyBookDialog(this, bookName);
+        modifyDialog.setVisible(true);
+    }
+
+    public static void main(String[] args) {
+        // 테스트 코드
+        SwingUtilities.invokeLater(() -> new ModifyBookFrame());
+    }
+}
+
+class ModifyBookDialog extends JDialog {
+    private JTextField txtBookName;
+    private JTextField txtAuthorName;
+    private JTextField txtYear;
+
+    public ModifyBookDialog(JFrame parent, String bookName) {
+        super(parent, "도서 정보 수정", true); // 모달 다이얼로그로 설정
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+        setSize(400, 200);
+        setLocationRelativeTo(parent);
+
+        JPanel panel = new JPanel(new GridLayout(4, 2));
+        add(panel);
+
+        JLabel lblBookName = new JLabel("도서명:");
+        txtBookName = new JTextField(bookName);
+        JLabel lblAuthorName = new JLabel("저자명:");
+        txtAuthorName = new JTextField();
+        JLabel lblYear = new JLabel("출판년도:");
+        txtYear = new JTextField();
+        JButton btnSave = new JButton("저장"); // 저장 버튼 추가
+
+        panel.add(lblBookName);
+        panel.add(txtBookName);
+        panel.add(lblAuthorName);
+        panel.add(txtAuthorName);
+        panel.add(lblYear);
+        panel.add(txtYear);
+        panel.add(new JLabel()); // 빈 라벨 추가
+        panel.add(btnSave); // 저장 버튼 추가
+
+        btnSave.addActionListener(e -> saveBook()); // 저장 버튼의 클릭 이벤트 처리 추가
+    }
+
+    private void saveBook() {
+        // 수정된 도서 정보를 데이터베이스에 업데이트하는 메서드
+        String bookName = txtBookName.getText();
+        String authorName = txtAuthorName.getText();
+        int year = Integer.parseInt(txtYear.getText());
+
+        try {
+            BookDAO bookDAO = new BookDAO(); // BookDAO 클래스의 인스턴스 생성
+            Connection conn = bookDAO.getConn(); // 생성된 인스턴스를 통해 getConn() 메서드 호출
+            String query = "UPDATE managebooks SET author_name = ?, year = ? WHERE book_name = ?";
+            PreparedStatement stmt = conn.prepareStatement(query);
+            stmt.setString(1, authorName);
+            stmt.setInt(2, year);
+            stmt.setString(3, bookName);
+
+            int rowsAffected = stmt.executeUpdate();
+            if (rowsAffected > 0) {
+                JOptionPane.showMessageDialog(this, "도서 정보가 성공적으로 수정되었습니다.");
+                dispose(); // 다이얼로그 닫기
+            } else {
+                JOptionPane.showMessageDialog(this, "도서 정보 수정 중 오류가 발생했습니다.");
+            }
+
+            stmt.close();
+            conn.close();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "도서 정보 수정 중 오류가 발생했습니다.");
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "출판년도는 숫자로 입력하세요.");
+        }
+    }
+}

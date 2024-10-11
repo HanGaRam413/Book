@@ -1,0 +1,113 @@
+package book;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.sql.*;
+
+public class Rent_Popup extends JFrame {
+    private DetailFrame detailFrame; // DetailFrame 참조 추가
+    private JLabel jl;
+    private JButton jb1, jb2;
+
+    private class EventClass implements ActionListener {
+
+    	@Override
+    	public void actionPerformed(ActionEvent e) {
+    	    if (e.getSource() == jb1) {
+    	        String bookName = detailFrame.getTitleLabel().getText().replace("제목: ", "");
+    	        if (bookName != null) {
+    	            // 대여 가능 여부 확인
+    	            int status = getBookStatus(bookName);
+    	            if (status == 1) {
+    	                JOptionPane.showMessageDialog(null, "<" + bookName + ">은(는) 대여중이므로 대여할 수 없습니다.");
+    	            } else if (status == 0) {
+    	                JOptionPane.showMessageDialog(null, "<" + bookName + ">이(가) 대여 완료되었습니다");
+    	                updateBookStatus(bookName); // 대여 완료 시 상태 업데이트
+    	                detailFrame.updateStatus(); // DetailFrame의 상태 업데이트 메소드 호출
+    	            } else {
+    	                JOptionPane.showMessageDialog(null, "대여 정보를 가져올 수 없습니다");
+    	            }
+    	        } else {
+    	            JOptionPane.showMessageDialog(null, "대여 정보를 가져올 수 없습니다");
+    	        }
+    	    } else if (e.getSource() == jb2) {
+    	        JOptionPane.showMessageDialog(null, "대여가 취소되었습니다");
+    	    }
+
+    	    // Rent_Popup 창만 닫도록 수정
+    	    dispose();
+    	}
+
+        // 대여 완료 후 상태 업데이트 메소드
+        private void updateBookStatus(String bookName) {
+            try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/mydb", "root", "1234")) {
+                String query = "UPDATE books SET status = ? WHERE book_name = ?";
+                try (PreparedStatement preparedStatement = conn.prepareStatement(query)) {
+                    preparedStatement.setInt(1, 1);  // 1은 대여중을 나타냅니다.
+                    preparedStatement.setString(2, bookName);
+                    preparedStatement.executeUpdate();
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        }
+
+        // 대여 가능 여부 확인 메소드
+        private int getBookStatus(String bookName) {
+            try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/mydb", "root", "1234")) {
+                String query = "SELECT status FROM books WHERE book_name = ?";
+                try (PreparedStatement preparedStatement = conn.prepareStatement(query)) {
+                    preparedStatement.setString(1, bookName);
+                    try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                        if (resultSet.next()) {
+                            return resultSet.getInt("status");
+                        }
+                    }
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+            return -1; // 대여 정보를 가져올 수 없는 경우
+        }
+    }
+
+    public Rent_Popup(DetailFrame detailFrame) {
+        this.detailFrame = detailFrame; // DetailFrame 참조 설정
+
+        Container c = getContentPane();
+        c.setLayout(null);
+        c.setBackground(Color.white);
+        jl = new JLabel("대여 하시겠습니까?");
+        jb1 = new JButton("Yes");
+        jb2 = new JButton("No");
+
+        EventClass eventListener = new EventClass();
+        jb1.addActionListener(eventListener);
+        jb2.addActionListener(eventListener);
+
+        jl.setBounds(110, 35, 150, 50);
+
+        jl.setFont(new Font("맑은 고딕", Font.BOLD, 17));
+        c.add(jl);
+        jb1.setBackground(new Color(0, 0, 128));
+        jb2.setBackground(new Color(0, 0, 128));
+        jb1.setForeground(Color.white);
+        jb2.setForeground(Color.white);
+        jb1.setBounds(80, 90, 100, 30);
+        c.add(jb1);
+        jb2.setBounds(190, 90, 100, 30);
+        c.add(jb2);
+
+        setSize(400, 200);
+        setTitle("책 대출 POPUP");
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setVisible(true);
+    }
+
+    public static void main(String[] args) {
+        // 생성자에서 DetailFrame 참조 전달
+        SwingUtilities.invokeLater(() -> new Rent_Popup(new DetailFrame(0, "BookName", "AuthorName", 2022)));
+    }
+}

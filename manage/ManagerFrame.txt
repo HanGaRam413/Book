@@ -1,0 +1,242 @@
+package manage;
+
+import javax.swing.*;
+import dao.ManagementDAO;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+public class ManagerFrame extends JFrame {
+    private JButton overdueButton, addBookButton, modifyBookButton, loginButton;
+    private boolean isLoggedIn = false; // 로그인 상태를 나타내는 변수
+    private String loggedInUsername; // 현재 로그인된 사용자 아이디
+    private String loggedInName; // 현재 로그인된 사용자 이름
+    private JLabel welcomeLabel, lTitle; // 환영 메시지를 표시할 레이블
+
+    public ManagerFrame() {
+        super("도서관리 - 관리자 모드");
+        super.setResizable(true);
+        setSize(520, 500);
+        setLocationRelativeTo(null);
+        Container c = getContentPane();
+        c.setLayout(new BorderLayout());
+
+        // North Panel 설정
+        JPanel northPanel = new JPanel();
+        lTitle = new JLabel("도서관리 - 관리자 모드");
+        lTitle.setFont(new Font("맑은 고딕", Font.BOLD, 30));
+        northPanel.add(lTitle);
+        c.add(northPanel, BorderLayout.NORTH);
+
+        // Center Panel 설정
+        JPanel centerPanel = new JPanel(new GridLayout(2, 2)); 
+        
+        overdueButton = new JButton("연체 도서 목록");
+        overdueButton.setFont(new Font("맑은 고딕", Font.BOLD, 20));
+        overdueButton.setHorizontalTextPosition(SwingConstants.CENTER);
+        overdueButton.setVerticalTextPosition(SwingConstants.CENTER);
+
+        addBookButton = new JButton("새 책 추가");
+        addBookButton.setFont(new Font("맑은 고딕", Font.BOLD, 20));
+        addBookButton.setHorizontalTextPosition(SwingConstants.CENTER);
+        addBookButton.setVerticalTextPosition(SwingConstants.CENTER);
+
+        modifyBookButton = new JButton("도서 정보 수정");
+        modifyBookButton.setFont(new Font("맑은 고딕", Font.BOLD, 20));
+        modifyBookButton.setHorizontalTextPosition(SwingConstants.CENTER);
+        modifyBookButton.setVerticalTextPosition(SwingConstants.CENTER);
+
+        loginButton = new JButton("로그인");
+        loginButton.setFont(new Font("맑은 고딕", Font.BOLD, 20));
+        loginButton.setHorizontalTextPosition(SwingConstants.CENTER);
+        loginButton.setVerticalTextPosition(SwingConstants.CENTER);
+
+        overdueButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // 연체 도서 목록을 보여주는 기능 추가
+                showOverdueBooks();
+            }
+        });
+
+        addBookButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // 새 책을 추가하는 기능 추가
+                addNewBook();
+            }
+        });
+
+        modifyBookButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // 도서 정보를 수정하는 기능 추가
+                modifyBook();
+            }
+        });
+
+        loginButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (!isLoggedIn) {
+                    // 로그인이 되어 있지 않으면 로그인 창을 엽니다.
+                    LoginFrame lf = new LoginFrame(new LoginListener() {
+                        @Override
+                        public void onLoginSuccess(String username) {
+                            // 로그인이 성공하면 버튼 텍스트를 "로그아웃"으로 변경합니다.
+                            isLoggedIn = true;
+                            loggedInUsername = username;
+                            loggedInName = ManagementDAO.getInstance().getNameById(username);
+                            loginButton.setText("로그아웃");
+                            updateWelcomeMessage();
+                        }
+                    });
+                    lf.setVisible(true);
+                } else {
+                    // 로그인이 되어 있으면 로그아웃 처리를 수행합니다.
+                    isLoggedIn = false;
+                    loggedInUsername = "";
+                    loggedInName = "";
+                    loginButton.setText("로그인");
+                    updateWelcomeMessage();
+                    // 여기서 추가적인 로그아웃 처리를 수행할 수 있습니다.
+                }
+            }
+        });
+
+        centerPanel.add(overdueButton);
+        centerPanel.add(addBookButton);
+        centerPanel.add(modifyBookButton);
+        centerPanel.add(loginButton);
+
+        c.add(centerPanel, BorderLayout.CENTER);
+
+        // South Panel 설정
+        JPanel southPanel = new JPanel();
+        welcomeLabel = new JLabel("환영합니다!");
+        welcomeLabel.setFont(new Font("맑은 고딕", Font.BOLD, 30));
+        southPanel.add(welcomeLabel);
+        c.add(southPanel, BorderLayout.SOUTH);
+
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setVisible(true);
+    }
+
+    private void showOverdueBooks() {
+        overdueFrame of = new overdueFrame();
+    }
+
+    private void addNewBook() {
+        addNewBook ab = new addNewBook();
+    }
+
+    private void modifyBook() {
+    	ModifyBookFrame mf = new ModifyBookFrame();
+    }
+
+    private void updateWelcomeMessage() {
+        // South Panel에 환영 메시지를 업데이트합니다.
+        if (isLoggedIn) {
+            welcomeLabel.setText(loggedInName + " 관리자님 환영합니다!");
+            welcomeLabel.setFont(new Font("맑은 고딕", Font.BOLD, 30));
+        } else {
+            welcomeLabel.setText("환영합니다!");
+        }
+    }
+
+    public static void main(String[] args) {
+        EventQueue.invokeLater(() -> new ManagerFrame());
+    }
+
+    interface LoginListener {
+        void onLoginSuccess(String username);
+    }
+}
+
+
+class LoginFrame extends JFrame {
+    private JPanel lPanel;
+    private JLabel lLogin, lId, lPassword;
+    private JTextField tId;
+    private JPasswordField tPassword;
+    private JButton login;
+    private ManagerFrame.LoginListener loginListener;
+
+    public LoginFrame(ManagerFrame.LoginListener listener) {
+        super("로그인");
+        super.setResizable(true);
+        setSize(350, 400);
+        setLocationRelativeTo(null);
+
+        // 글꼴 설정
+        Font malgunGothicFont = new Font("맑은 고딕", Font.PLAIN, 15);
+        UIManager.put("Button.font", malgunGothicFont);
+        UIManager.put("Label.font", malgunGothicFont);
+        UIManager.put("TextField.font", malgunGothicFont);
+        UIManager.put("PasswordField.font", malgunGothicFont);
+
+        lPanel = new JPanel();
+        lPanel.setLayout(new BorderLayout());
+        setContentPane(lPanel);
+
+        lLogin = new JLabel("로그인");
+        lLogin.setFont(new Font("맑은 고딕", Font.BOLD, 50));
+        lLogin.setHorizontalAlignment(SwingConstants.CENTER);
+        lLogin.setPreferredSize(new Dimension(120, 120));
+        lPanel.add(lLogin, BorderLayout.NORTH);
+
+        JPanel Main = new JPanel(new GridLayout(2, 2, 15, 15));
+
+        lId = new JLabel("아이디");
+        lId.setHorizontalAlignment(SwingConstants.CENTER);
+        Main.add(lId);
+
+        tId = new JTextField();
+        tId.setColumns(10);
+        Main.add(tId);
+
+        lPassword = new JLabel("비밀번호");
+        lPassword.setHorizontalAlignment(SwingConstants.CENTER);
+        Main.add(lPassword);
+
+        tPassword = new JPasswordField();
+        tPassword.setColumns(10);
+        Main.add(tPassword);
+
+        lPanel.add(Main, BorderLayout.WEST);
+
+        JPanel btnMain = new JPanel(new FlowLayout(FlowLayout.CENTER, 40, 60));
+
+        login = new JButton("로그인");
+        btnMain.add(login);
+
+        lPanel.add(btnMain, BorderLayout.SOUTH);
+
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // 창 닫기 동작 설정
+        setVisible(true);
+
+        login.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String id = tId.getText();
+                char[] passwordCharArray = tPassword.getPassword();
+                String password = new String(passwordCharArray);
+                
+                ManagementDAO mdao = ManagementDAO.getInstance();
+
+                int result = mdao.idPassword(id, password);
+                
+                if (result == 1) {
+                    JOptionPane.showMessageDialog(null, "로그인 완료");
+                    if (listener != null) {
+                        listener.onLoginSuccess(id);
+                    }
+                    dispose();
+                } else {
+                    JOptionPane.showMessageDialog(null, "로그인 실패");
+                }
+            }
+        });
+    }
+}

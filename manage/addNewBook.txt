@@ -1,0 +1,101 @@
+package manage;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
+public class addNewBook extends JFrame {
+    private JTextField txtBookName;
+    private JTextField txtAuthorName;
+    private JTextField txtYear;
+    private JButton btnAddBook;
+
+    public addNewBook() {
+        setTitle("새 도서 추가");
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setSize(400, 300);
+        setLocationRelativeTo(null);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new GridLayout(4, 2));
+
+        JLabel lblBookName = new JLabel("도서명:");
+        txtBookName = new JTextField();
+        JLabel lblAuthorName = new JLabel("저자명:");
+        txtAuthorName = new JTextField();
+        JLabel lblYear = new JLabel("출판년도:");
+        txtYear = new JTextField();
+        btnAddBook = new JButton("도서 추가");
+
+        panel.add(lblBookName);
+        panel.add(txtBookName);
+        panel.add(lblAuthorName);
+        panel.add(txtAuthorName);
+        panel.add(lblYear);
+        panel.add(txtYear);
+        panel.add(new JLabel()); // Empty label for alignment
+        panel.add(btnAddBook);
+
+        btnAddBook.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                addBook();
+            }
+        });
+
+        add(panel);
+        setVisible(true);
+    }
+
+    private void addBook() {
+        String bookName = txtBookName.getText();
+        String authorName = txtAuthorName.getText();
+        String yearStr = txtYear.getText();
+
+        if (yearStr.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "항목들을 입력해주세요.");
+            return; // 추가 작업을 중단합니다.
+        }
+
+        int year;
+        try {
+            year = Integer.parseInt(yearStr);
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "출판년도는 숫자로 입력해주세요.");
+            return; // 추가 작업을 중단합니다.
+        }
+
+        BookDTO bookDTO = new BookDTO();
+        bookDTO.setBookName(bookName);
+        bookDTO.setAuthorName(authorName);
+        bookDTO.setYear(year);
+        bookDTO.setStatus(0);
+
+        BookDAO bookDAO = new BookDAO();
+        boolean success = bookDAO.addBook(bookDTO);
+
+        if (success) {
+            updateCheckoutAndReturnDate(); // 업데이트 메서드 호출
+            JOptionPane.showMessageDialog(this, "도서가 성공적으로 추가되었습니다.");
+            txtBookName.setText("");
+            txtAuthorName.setText("");
+            txtYear.setText("");
+        } else {
+            JOptionPane.showMessageDialog(this, "도서 추가 중 오류가 발생했습니다.");
+        }
+    }
+
+    // checkoutDate와 returnDate를 업데이트하는 메서드
+    private void updateCheckoutAndReturnDate() {
+        BookDAO bookDAO = new BookDAO(); // BookDAO 인스턴스 생성
+        bookDAO.updateCheckoutAndReturnDate(); // BookDAO의 메서드 호출
+    }
+
+    public static void main(String[] args) {
+        new addNewBook();
+    }
+}
